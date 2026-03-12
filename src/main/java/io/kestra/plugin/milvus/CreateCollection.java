@@ -16,18 +16,19 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 import lombok.Getter;
-import lombok.experimental.SuperBuilder;
+import lombok.ToString;
 import org.apache.commons.collections4.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@SuperBuilder
 @Schema(
     title = "Create a new collection in Milvus"
 
 )
-public class CreateCollection extends AbstractMilvusTask implements RunnableTask<CreateCollection.Output> {
+@Builder
+@ToString
+public class CreateCollection implements RunnableTask<CreateCollection.Output> {
 
     @Schema(title = "Fields of the collection")
     @NotNull
@@ -40,16 +41,13 @@ public class CreateCollection extends AbstractMilvusTask implements RunnableTask
     @NotNull
     private Property<String> collectionName;
 
+    @NotNull
+    private Property<ConnectConfig> connectConfig;
 
     @Override
     public Output run(RunContext runContext) throws Exception {
-        // TODO : Get connection outside of this method to make it common to all tasks
-        ConnectConfig connectConfig = ConnectConfig.builder()
-            .uri(CLUSTER_ENDPOINT)
-            .token("TODO")
-            .build();
-
-        MilvusClientV2 client = new MilvusClientV2(connectConfig);
+        ConnectConfig rConnectConfig = runContext.render(this.connectConfig).as(ConnectConfig.class).orElseThrow(() -> new IllegalArgumentException("Connection configuration to Milvus is required"));
+        MilvusClientV2 client = new MilvusClientV2(rConnectConfig);
 
         List<Field> rFields = runContext.render(this.fields).asList(Field.class);
         List<IndexParameter> rIndexParameters = runContext.render(this.indexParameters).asList(IndexParameter.class);
